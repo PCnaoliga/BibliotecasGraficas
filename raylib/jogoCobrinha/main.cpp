@@ -5,12 +5,15 @@
 #include <iostream>
 #include <raylib.h>  // Biblioteca grafica usada
 #include <raymath.h> // Biblioteca do ray lib para calculo da area
+#include <stdexcept>
 #include <type_traits>
 
 using namespace std;
 // Cores que vão ser usadas
 Color green = {173, 204, 96, 255};
 Color darkgreen = {43, 51, 24, 255};
+Color arcadegreen = {140, 156, 72, 255};
+Color arcadedarkgreen = {92, 108, 56, 255};
 
 // Sistema de "Celulas", espaçamentos na tela que vão ajudar
 int cellSize = 30;
@@ -40,6 +43,33 @@ bool eventTriger(double interval) {
   }
   return false;
 }
+
+class Button {
+public:
+  int buttonWidth = cellSize * 8;
+  int buttonHeight = cellSize * 3;
+  int spacing = cellSize * 3;
+  int buttonCount = 4;
+
+  void Draw() {
+    int areaSize = cellCount * cellSize;
+    int totalMenuHeight =
+        (buttonCount * buttonHeight) + ((buttonCount - 1) * spacing);
+
+    int startX = offset + (areaSize - buttonWidth) / 2;
+    int startY = offset + (areaSize - totalMenuHeight) / 2;
+
+    for (int i = 0; i < buttonCount; i++) {
+      int buttonY = startY + i * (buttonHeight + spacing);
+
+      Rectangle buttonRect = {(float)startX, (float)buttonY, (float)buttonWidth,
+                              (float)buttonHeight};
+
+      DrawRectangleRec(buttonRect, arcadedarkgreen);
+      DrawRectangleLinesEx(buttonRect, 2, darkgreen);
+    }
+  }
+};
 
 // Classe para o objeto Cobra(La ele novamente?)
 class Snake {
@@ -126,7 +156,7 @@ public:
   // Cenario do começo do jogo
   Snake snake = Snake();
   Food food = Food(snake.body);
-  bool running = true;
+  bool running = false;
   int score = 0;
   Sound eatSound;
   Sound wallSound;
@@ -208,46 +238,69 @@ int main() {
   SetTargetFPS(60);
 
   Game game = Game();
+  Button button = Button();
 
   // Loop do jogo
   while (!WindowShouldClose()) {
     BeginDrawing();
 
-    // Quando o eventTriger for ativado a cada 0.2 Segundos vai ativar o update
+    // Quando o eventTriger for ativado a cada 0.2 Segundos vai ativar o
+    // update
     if (eventTriger(0.2)) {
       game.Update();
     }
 
-    // Ifs de verificação para a movimentação da cobra
-    if (IsKeyPressed(KEY_UP) && game.snake.direction.y != 1) {
-      game.snake.direction = {0, -1};
-      // Essa Função e importante para quando o usuario perder a cobra volta(UI)
-      // quando e apertado os direcionais
-      game.running = true;
+    // Quando o jogo estiver rodando
+    if (game.running) {
+      // Ifs de verificação para a movimentação da cobra
+      if (IsKeyPressed(KEY_UP) && game.snake.direction.y != 1) {
+        game.snake.direction = {0, -1};
+        // Essa Função e importante para quando o usuario perder a cobra
+        // volta(UI) quando e apertado os direcionais
+        game.running = true;
+      }
+      if (IsKeyPressed(KEY_DOWN) && game.snake.direction.y != -1) {
+        game.snake.direction = {0, 1};
+        game.running = true;
+      }
+      if (IsKeyPressed(KEY_LEFT) && game.snake.direction.x != 1) {
+        game.snake.direction = {-1, 0};
+        game.running = true;
+      }
+      if (IsKeyPressed(KEY_RIGHT) && game.snake.direction.x != -1) {
+        game.snake.direction = {1, 0};
+        game.running = true;
+      }
+
+      // Parte direcionada apenas para o visual
+      ClearBackground(green);
+      game.Draw();
+      DrawRectangleLinesEx(Rectangle{(float)offset - 5, (float)offset - 5,
+                                     (float)cellSize * cellCount + 10,
+                                     (float)cellSize * cellCount + 10},
+                           5, darkgreen);
+      DrawText("Retro Snake", offset - 5, 20, 40, darkgreen);
+      DrawText(TextFormat("%i", game.score), offset - 5,
+               offset + cellSize * cellCount + 10, 40, darkgreen);
     }
-    if (IsKeyPressed(KEY_DOWN) && game.snake.direction.y != -1) {
-      game.snake.direction = {0, 1};
-      game.running = true;
+
+    // Quando o jogo não estiver rodando/Tela de titulo
+    if (!game.running) {
+      BeginDrawing();
+      ClearBackground(green);
+      DrawRectangleLinesEx(Rectangle{(float)offset - 5, (float)offset - 5,
+                                     (float)cellSize * cellCount + 10,
+                                     (float)cellSize * cellCount + 10},
+                           5, darkgreen);
+      DrawText("Retro Snake", offset - 5 + 170, 20, 60, darkgreen);
+      button.Draw();
     }
-    if (IsKeyPressed(KEY_LEFT) && game.snake.direction.x != 1) {
-      game.snake.direction = {-1, 0};
-      game.running = true;
-    }
-    if (IsKeyPressed(KEY_RIGHT) && game.snake.direction.x != -1) {
-      game.snake.direction = {1, 0};
+
+    // Quando for pressionado a tecla ENTER starta o jogo
+    if (IsKeyPressed(KEY_ENTER)) {
       game.running = true;
     }
 
-    // Parte direcionada apenas para o visual
-    ClearBackground(green);
-    game.Draw();
-    DrawRectangleLinesEx(Rectangle{(float)offset - 5, (float)offset - 5,
-                                   (float)cellSize * cellCount + 10,
-                                   (float)cellSize * cellCount + 10},
-                         5, darkgreen);
-    DrawText("Retro Snake", offset - 5, 20, 40, darkgreen);
-    DrawText(TextFormat("%i", game.score), offset - 5,
-             offset + cellSize * cellCount + 10, 40, darkgreen);
     EndDrawing();
   }
 
